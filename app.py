@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, session, make_response, redirect, url_for, jsonify
 from firebase_config import db
 from products import PRODUCTS
-import pdfkit
 import io
 import os
 import smtplib
