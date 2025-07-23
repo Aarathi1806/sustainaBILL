@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SustainaBill</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <a href="{{ url_for('logout') }}" style="position:absolute;top:24px;right:36px;background:#388e3c;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:bold;box-shadow:0 2px 8px rgba(46,125,50,0.10);z-index:10;">Logout</a>
+  <div class="container">
+    <h1>SustainaBill – Eco Receipt Generator</h1>
+    <input type="text" id="searchInput" placeholder="Search for an item..." style="width:100%;padding:10px;margin-bottom:18px;font-size:1.1em;border-radius:6px;border:1px solid #81c784;">
+    <form method="POST">
+      <div class="customer-info">
+        <label for="customer_name">Customer Name:</label>
+        <input type="text" id="customer_name" name="customer_name" required />
+        <label for="customer_contact">Phone or Email:</label>
+        <input type="text" id="customer_contact" name="customer_contact" required />
+      </div>
+      <div id="productList">
+      {% for category, items in products.items() %}
+        <h2 style="margin-top:28px;color:#388e3c;font-size:1.3em;">{{ category }}</h2>
+        {% for name, price in items.items() %}
+          <div class="product-row">
+            <label>{{ name }} (₹{{ price }})</label>
+            <input type="number" name="{{ name }}" min="0" value="0" />
+          </div>
+        {% endfor %}
+      {% endfor %}
+      </div>
+      <button type="submit">Generate Bill</button>
+    </form>
+  </div>
+  <script>
+    const searchInput = document.getElementById('searchInput');
+    const productRows = Array.from(document.querySelectorAll('.product-row'));
+    searchInput.addEventListener('input', function() {
+      const query = this.value.trim().toLowerCase();
+      let found = false;
+      productRows.forEach(row => {
+        const label = row.querySelector('label').textContent.toLowerCase();
+        if (label.includes(query)) {
+          row.style.display = '';
+          found = true;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      if (query && !found) {
+        setTimeout(() => {
+          if (searchInput.value.trim().toLowerCase() === query) {
+            alert('Item not available');
+          }
+        }, 300);
+      }
+    });
+  </script>
+</body>
+</html>

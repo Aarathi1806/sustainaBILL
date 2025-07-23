@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Receipt - SustainaBill</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', _external=True) }}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      background: #e8f5e9 url('/static/supermarket_receipt_bg.jpeg') no-repeat center center fixed !important;
+      background-size: cover;
+      background-position: center center;
+      background-attachment: fixed;
+      min-height: 100vh;
+      min-width: 100vw;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      transition: background 0.4s;
+    }
+    .receipt-header {
+      text-align: center;
+      background: linear-gradient(135deg, #4CAF50, #2E7D32);
+      color: white;
+      padding: 20px;
+      border-radius: 10px 10px 0 0;
+      margin-bottom: 0;
+    }
+    .receipt-header h1 {
+      margin: 0;
+      font-size: 2.5em;
+      font-weight: bold;
+    }
+    .receipt-header .subtitle {
+      font-size: 1.2em;
+      opacity: 0.9;
+      margin-top: 5px;
+    }
+    .receipt-container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      margin: 20px auto;
+      max-width: 800px;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+    }
+    .customer-info {
+      background: #f1f8e9;
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin-bottom: 18px;
+      font-size: 1.08em;
+      color: #33691e;
+      box-shadow: 0 1px 4px rgba(76,175,80,0.07);
+      transition: background 0.4s, color 0.4s;
+    }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    .items-table th {
+      background: #4CAF50;
+      color: white;
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: bold;
+    }
+    .items-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .items-table tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .sustainability-icon {
+      font-size: 1.2em;
+      margin-right: 5px;
+    }
+    .totals-section {
+      background: #e8f5e9;
+      padding: 20px;
+      border-top: 3px solid #4CAF50;
+    }
+    .totals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .total-item {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .total-item .label {
+      font-weight: bold;
+      color: #2E7D32;
+      margin-bottom: 5px;
+    }
+    .total-item .value {
+      font-size: 1.3em;
+      font-weight: bold;
+    }
+    .recycling-section {
+      background: #fff3e0;
+      padding: 20px;
+      border-left: 5px solid #ff9800;
+      margin: 20px 0;
+    }
+    .recycling-section h3 {
+      color: #e65100;
+      margin-top: 0;
+    }
+    .brand-scores {
+      background: #f3e5f5;
+      padding: 20px;
+      border-left: 5px solid #9c27b0;
+      margin: 20px 0;
+    }
+    .brand-scores h3 {
+      color: #6a1b9a;
+      margin-top: 0;
+    }
+    .score-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .score-table th, .score-table td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #e1bee7;
+    }
+    .score-table th {
+      background: #9c27b0;
+      color: white;
+    }
+    .donation-section {
+      background: #e1f5fe;
+      padding: 20px;
+      border-left: 5px solid #03a9f4;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .donation-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .donation-btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      min-width: 140px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .btn-yes {
+      background: linear-gradient(135deg, #4CAF50, #45a049);
+      color: white;
+      border: 2px solid #388e3c;
+      box-shadow: 0 2px 4px rgba(76,175,80,0.3);
+    }
+    .btn-yes:hover {
+      background: linear-gradient(135deg, #45a049, #388e3c);
+      border-color: #2e7d32;
+      box-shadow: 0 4px 8px rgba(76,175,80,0.4);
+      transform: translateY(-1px);
+    }
+    .btn-yes:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(76,175,80,0.3);
+    }
+    .btn-later {
+      background: linear-gradient(135deg, #ffe082, #ffd54f);
+      color: #7c5700;
+      border: 2px solid #ffe082;
+      box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);
+      font-weight: bold;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all 0.3s;
+    }
+    .btn-later:hover {
+      background: linear-gradient(135deg, #ffd54f, #ffecb3);
+      color: #5d4200;
+      border-color: #ffd54f;
+      box-shadow: 0 4px 12px rgba(255, 193, 7, 0.22);
+      transform: translateY(-1px) scale(1.04);
+    }
+    .btn-later:active {
+      transform: translateY(0) scale(1);
+      box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);
+    }
+    .green-tip {
+      background: #c8e6c9;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 5px solid #4CAF50;
+    }
+    .green-tip h4 {
+      color: #2E7D32;
+      margin-top: 0;
+    }
+    .action-buttons {
+      text-align: center;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .action-btn {
+      margin: 0 10px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    .btn-pdf {
+      background: #ff5722;
+      color: white;
+    }
+    .btn-pdf:hover {
+      background: #f4511e;
+    }
+    .btn-email {
+      background: #2196F3;
+      color: white;
+    }
+    .btn-email:hover {
+      background: #1976D2;
+    }
+    .btn-read {
+      background: #9c27b0;
+      color: white;
+    }
+    .btn-read:hover {
+      background: #7b1fa2;
+    }
+    .btn-read.playing {
+      background: #f44336;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    .waste-summary {
+      background: #fff8e1;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      border-left: 5px solid #ffc107;
+    }
+    .receipt-card {
+      background: rgba(255,255,255,0.97);
+      border: 2.5px solid #a5d6a7;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(44, 120, 60, 0.13);
+      max-width: 600px;
+      margin: 48px auto 32px auto;
+      padding: 36px 28px 32px 28px;
+      position: relative;
+      z-index: 2;
+      backdrop-filter: blur(2px);
+      transition: background 0.4s, color 0.4s;
+    }
+    .receipt-title {
+      color: #2e7d32;
+      text-align: center;
+      font-weight: bold;
+      font-size: 2.2em;
+      margin-bottom: 22px;
+      letter-spacing: 1px;
+      transition: color 0.4s;
+    }
+    .receipt-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+      font-size: 1.05em;
+    }
+    .receipt-table th {
+      background: #a5d6a7;
+      color: #1b5e20;
+      font-weight: bold;
+      padding: 10px 6px;
+      border-radius: 4px 4px 0 0;
+      transition: background 0.4s, color 0.4s;
+    }
+    .receipt-table td {
+      background: #fff;
+      text-align: center;
+      padding: 9px 6px;
+      border-bottom: 1px solid #e0e0e0;
+      transition: background 0.4s, color 0.4s;
+    }
+    .summary {
+      margin: 16px 0 10px 0;
+      font-size: 1.13em;
+      color: #2e7d32;
+      transition: color 0.4s;
+    }
+    .green {
+      color: #388e3c;
+      font-weight: bold;
+      transition: color 0.4s;
+    }
+    .info-box {
+      background: #e3f2fd;
+      border: 1.5px solid #90caf9;
+      border-radius: 8px;
+      color: #1565c0;
+      padding: 14px 18px;
+      margin: 18px 0;
+      font-size: 1em;
+      box-shadow: 0 2px 8px rgba(33,150,243,0.07);
+      transition: background 0.4s, color 0.4s;
+    }
+    .button-row {
+      display: flex;
+      gap: 18px;
+      justify-content: center;
+      margin-top: 22px;
+      flex-wrap: wrap;
+    }
+    .green-btn, .read-btn, .theme-toggle-btn {
+      background: linear-gradient(135deg, #43a047, #388e3c);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 13px 32px;
+      font-size: 1.08em;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(56,142,60,0.13);
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s, color 0.4s;
+      margin-bottom: 8px;
+      outline: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .green-btn:hover, .read-btn:hover, .theme-toggle-btn:hover {
+      background: linear-gradient(135deg, #388e3c, #2e7d32);
+      box-shadow: 0 4px 16px rgba(56,142,60,0.18);
+      transform: translateY(-2px) scale(1.03);
+    }
+    .read-btn {
+      background: linear-gradient(135deg, #8e24aa, #6a1b9a);
+      color: #fff;
+    }
+    .read-btn.playing {
+      background: #f44336;
+      animation: pulse 1.5s infinite;
+    }
+    .theme-toggle-btn {
+      background: linear-gradient(135deg, #607d8b, #263238);
+      color: #fff;
+      font-size: 1em;
+      padding: 11px 24px;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    /* Dark Theme */
+    body.dark-theme {
+      background: #23272e url('/static/supermarket_receipt_bg.jpeg') no-repeat center center fixed !important;
+      background-size: cover;
+      color: #e0e0e0;
+    }
+    body.dark-theme .receipt-card {
+      background: rgba(34,40,49,0.97);
+      border-color: #388e3c;
+      color: #e0e0e0;
+    }
+    body.dark-theme .receipt-title {
+      color: #a5d6a7;
+    }
+    body.dark-theme .customer-info {
+      background: #263238;
+      color: #a5d6a7;
+    }
+    body.dark-theme .receipt-table th {
+      background: #388e3c;
+      color: #fff;
+    }
+    body.dark-theme .receipt-table td {
+      background: #23272e;
+      color: #e0e0e0;
+    }
+    body.dark-theme .summary {
+      color: #a5d6a7;
+    }
+    body.dark-theme .green {
+      color: #a5d6a7;
+    }
+    body.dark-theme .info-box {
+      background: #263238;
+      color: #90caf9;
+      border-color: #1976d2;
+    }
+    body.dark-theme .green-btn, body.dark-theme .read-btn {
+      background: linear-gradient(135deg, #1976d2, #388e3c);
+      color: #fff;
+    }
+    body.dark-theme .green-btn:hover, body.dark-theme .read-btn:hover {
+      background: linear-gradient(135deg, #388e3c, #1976d2);
+    }
+    body.dark-theme .theme-toggle-btn {
+      background: linear-gradient(135deg, #263238, #607d8b);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-card" id="receipt-content">
+    <h2 class="receipt-title">Eco Receipt</h2>
+    <div class="customer-info">
+      <strong>Customer Name:</strong> {{ customer_name }}<br>
+      <strong>Contact:</strong> {{ customer_contact }}
+    </div>
+    <table class="receipt-table">
+      <tr>
+        <th>Product</th><th>Qty</th><th>Price</th><th>Total</th><th>CO₂</th><th>Recyclable</th><th>Ethical Score</th>
+      </tr>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.name }}</td>
+        <td>{{ item.qty }}</td>
+        <td>₹{{ item.price }}</td>
+        <td>₹{{ item.item_total }}</td>
+        <td>{{ item.carbon }}</td>
+        <td>{% if item.recyclable %}♻️{% else %}No{% endif %}</td>
+        <td>{{ item.ethical_score }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div class="summary">
+      <strong>Total Price:</strong> <span class="green">₹{{ total_price }}</span><br>
+      <strong>Total Carbon Footprint:</strong> <span class="green">{{ total_carbon }} kg CO₂</span>
+    </div>
+    {% if plastic_count > 0 %}
+    <div class="info-box">
+      <strong>You bought {{ plastic_count }} plastic items.</strong><br>
+      To help offset your plastic impact, consider donating <strong>₹{{ plastic_count * 10 }}</strong> to <a href="https://plasticfreeindia.org/" target="_blank">Plastic Free India</a>.<br>
+      <em>Together, every small step makes a big difference for our planet. Thank you for making a sustainable choice!</em>
+    </div>
+    {% endif %}
+    {% if not pdf_mode %}
+    <div class="button-row">
+      <button class="green-btn" onclick="downloadPDF()">Download PDF</button>
+      <button class="green-btn" onclick="sendPDFToEmail()">Send Receipt to Email</button>
+      <button class="read-btn" onclick="readReceipt()" id="readBtn">🔊 Read Receipt</button>
+      <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeToggleBtn">🌓 Toggle Theme</button>
+    </div>
+    {% endif %}
+  </div>
+</body>
+<script>
+  </script>
+</html>

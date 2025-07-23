@@ -1,0 +1,9 @@
+node_modules/
+__pycache__/
+venv/
+svenv/
+*.pyc
+.DS_Store
+.env
+serviceAccountKey.json
+
