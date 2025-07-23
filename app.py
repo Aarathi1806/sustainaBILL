@@ -6,11 +6,18 @@ import io
 import os
 import smtplib
 from email.message import EmailMessage
+import json
+import random
+import string
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Needed for session
 
-# Hardcoded credentials for demo
+# Hardcoded
 OWNER_USERNAME = os.getenv("OWNER_USERNAME", "default_admin")
 OWNER_PASSWORD = os.getenv("OWNER_PASSWORD", "default_password")
 
@@ -63,12 +70,85 @@ CATEGORY_MAP = {
     "Broken Glass Piece": "Harmful"
 }
 
-def get_grouped_products():
-    grouped = {}
-    for product, price in PRODUCTS.items():
-        category = CATEGORY_MAP.get(product, "Other")
-        grouped.setdefault(category, []).append((product, price))
-    return grouped
+USERS_FILE = 'users.json'
+OTP_EXPIRY_MINUTES = 10
+
+# Helper to load users
+def load_users():
+    if not os.path.exists(USERS_FILE):
+        return {}
+    with open(USERS_FILE, 'r') as f:
+        return json.load(f)
+
+# Helper to save users
+def save_users(users):
+    with open(USERS_FILE, 'w') as f:
+        json.dump(users, f)
+
+# Helper to send OTP
+def send_otp_email(email, otp):
+    smtp_server = 'smtp.gmail.com'
+    smtp_port = 587
+    smtp_user = 'sustanabillsupermarket@gmail.com'
+    smtp_password = os.getenv('SMTP_PASSWORD')
+    msg = EmailMessage()
+    msg['Subject'] = 'Your OTP for SustainaBILL Signup'
+    msg['From'] = smtp_user
+    msg['To'] = email
+    msg.set_content(f'Your OTP for signup is: {otp}')
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    error = None
+    step = request.form.get('step') or request.args.get('step', 'email')
+    if request.method == 'POST':
+        users = load_users()
+        if step == 'email':
+            email = request.form.get('email')
+            if not email or '@' not in email:
+                error = 'Enter a valid email.'
+            elif email in users:
+                error = 'Email already registered.'
+            else:
+                otp = ''.join(random.choices(string.digits, k=6))
+                session['signup_otp'] = otp
+                session['signup_email'] = email
+                session['otp_time'] = datetime.utcnow().isoformat()
+                send_otp_email(email, otp)
+                return render_template('signup.html', step='otp', email=email)
+        elif step == 'otp':
+            otp = request.form.get('otp')
+            email = session.get('signup_email')
+            real_otp = session.get('signup_otp')
+            otp_time = session.get('otp_time')
+            if not (otp and real_otp and email and otp_time):
+                error = 'Session expired. Please start again.'
+                return render_template('signup.html', step='email', error=error)
+            if datetime.utcnow() > datetime.fromisoformat(otp_time) + timedelta(minutes=OTP_EXPIRY_MINUTES):
+                error = 'OTP expired. Please request again.'
+                return render_template('signup.html', step='email', error=error)
+            if otp != real_otp:
+                error = 'Incorrect OTP.'
+                return render_template('signup.html', step='otp', email=email, error=error)
+            return render_template('signup.html', step='set_password', email=email)
+        elif step == 'set_password':
+            email = session.get('signup_email')
+            password = request.form.get('password')
+            username = request.form.get('username')
+            if not (email and password and username):
+                error = 'All fields required.'
+                return render_template('signup.html', step='set_password', email=email, error=error)
+            users[email] = {'username': username, 'password': password}
+            save_users(users)
+            session.pop('signup_otp', None)
+            session.pop('signup_email', None)
+            session.pop('otp_time', None)
+            return redirect(url_for('login'))
+    return render_template('signup.html', step=step, error=error)
 
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -76,8 +156,17 @@ def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
+        users = load_users()
+        # Check against registered users
+        for email, user in users.items():
+            if user['username'] == username and user['password'] == password:
+                session["logged_in"] = True
+                session["user_email"] = email
+                return redirect(url_for("dashboard"))
+        # Fallback to OWNER_USERNAME/PASSWORD for legacy admin
         if username == OWNER_USERNAME and password == OWNER_PASSWORD:
             session["logged_in"] = True
+            session["user_email"] = None
             return redirect(url_for("dashboard"))
         else:
             error = "Invalid username or password."
@@ -373,6 +462,13 @@ def send_receipt_pdf():
         return "Receipt PDF sent to email!"
     except Exception as e:
         return f"Server error: {str(e)}", 500
+
+def get_grouped_products():
+    grouped = {}
+    for product, price in PRODUCTS.items():
+        category = CATEGORY_MAP.get(product, "Other")
+        grouped.setdefault(category, []).append((product, price))
+    return grouped
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Supermarket Owner Login - SustainaBill</title>
+  <title>Signup - SustainaBill</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <style>
     body {
@@ -13,7 +13,7 @@
       justify-content: center;
       font-family: 'Segoe UI', Arial, sans-serif;
     }
-    .login-card {
+    .signup-card {
       background: #fff;
       border-radius: 18px;
       box-shadow: 0 4px 24px rgba(46,125,50,0.13);
@@ -24,7 +24,7 @@
       border-top: 6px solid #43a047;
       text-align: center;
     }
-    .login-card h1 {
+    .signup-card h1 {
       color: #1b5e20;
       font-size: 2em;
       margin-bottom: 0.2em;
@@ -35,23 +35,21 @@
       justify-content: center;
       gap: 10px;
     }
-    .login-card h1 .icon {
-      font-size: 1.2em;
-    }
-    .login-card form {
+    .signup-card form {
       margin-top: 1.5em;
       display: flex;
       flex-direction: column;
       gap: 1.1em;
     }
-    .login-card label {
+    .signup-card label {
       text-align: left;
       color: #388e3c;
       font-weight: 500;
       margin-bottom: 0.2em;
     }
-    .login-card input[type="text"],
-    .login-card input[type="password"] {
+    .signup-card input[type="text"],
+    .signup-card input[type="password"],
+    .signup-card input[type="email"] {
       padding: 12px 14px;
       border-radius: 7px;
       border: 1.5px solid #b2dfdb;
@@ -59,13 +57,12 @@
       background: #f9fff9;
       transition: border 0.2s;
     }
-    .login-card input[type="text"]:focus,
-    .login-card input[type="password"]:focus {
+    .signup-card input:focus {
       border: 1.5px solid #43a047;
       outline: none;
       background: #fff;
     }
-    .login-card button {
+    .signup-card button {
       background: linear-gradient(90deg, #43a047 60%, #81c784 100%);
       color: #fff;
       border: none;
@@ -78,10 +75,10 @@
       box-shadow: 0 2px 8px rgba(46,125,50,0.10);
       transition: background 0.2s;
     }
-    .login-card button:hover {
+    .signup-card button:hover {
       background: linear-gradient(90deg, #2e7d32 60%, #a5d6a7 100%);
     }
-    .login-card .error {
+    .signup-card .error {
       color: #d32f2f;
       background: #ffebee;
       border-left: 4px solid #d32f2f;
@@ -91,28 +88,45 @@
       font-size: 1em;
       text-align: left;
     }
+    .signup-card .step {
+      margin-bottom: 1em;
+      color: #388e3c;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
-  <div class="login-card">
-    <h1><span class="icon" style="font-size: 80px;">🛒</span> SustainaBILL owner login</h1>
+  <div class="signup-card">
+    <h1>Sign Up</h1>
     <form method="POST">
-      <div>
+      {% if step == 'email' %}
+        <div class="step">Step 1: Enter your email</div>
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required />
+        <input type="hidden" name="step" value="email" />
+        <button type="submit">Send OTP</button>
+      {% elif step == 'otp' %}
+        <div class="step">Step 2: Enter the OTP sent to {{ email }}</div>
+        <label for="otp">OTP</label>
+        <input type="text" id="otp" name="otp" required maxlength="6" />
+        <input type="hidden" name="step" value="otp" />
+        <button type="submit">Verify OTP</button>
+      {% elif step == 'set_password' %}
+        <div class="step">Step 3: Set your username and password</div>
         <label for="username">Username</label>
         <input type="text" id="username" name="username" required />
-      </div>
-      <div>
         <label for="password">Password</label>
         <input type="password" id="password" name="password" required />
-      </div>
-      <button type="submit">Login</button>
+        <input type="hidden" name="step" value="set_password" />
+        <button type="submit">Create Account</button>
+      {% endif %}
     </form>
     {% if error %}
       <div class="error">{{ error }}</div>
     {% endif %}
     <div style="margin-top:1em;">
-      <a href="{{ url_for('signup') }}">New user? Sign up here</a>
+      <a href="{{ url_for('login') }}">Back to Login</a>
     </div>
   </div>
 </body>
-</html>
+</html> 
